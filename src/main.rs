@@ -4,6 +4,7 @@ use std::io::{BufReader, BufRead, Write};
 use rusqlite::{params, Connection};
 mod config;
 use std::error::Error;
+use std::time::Duration;
 
 fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     conn.execute(
@@ -30,8 +31,14 @@ fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_client(stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Error>> {
+fn handle_client(mut stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Error>> {
+    // Set a longer keepalive timeout to prevent connection drops during inactivity
+    stream.set_keepalive(Some(Duration::from_secs(300)))?; // 5 minutes
+    
+    println!("Starting to collect data from client...");
     let reader = BufReader::new(&stream);
+    let mut record_count = 0;
+    
     // Process one CSV record per line
     for line in reader.lines() {
         let line = line?;
@@ -88,7 +95,14 @@ fn handle_client(stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Err
                 dac_4,
             ],
         )?;
+        
+        record_count += 1;
+        if record_count % 100 == 0 {
+            println!("Processed {} records from current connection", record_count);
+        }
     }
+    
+    println!("Client disconnected. Processed {} total records.", record_count);
     Ok(())
 }
 
