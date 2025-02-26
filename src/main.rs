@@ -5,6 +5,7 @@ use rusqlite::{params, Connection};
 mod config;
 use std::error::Error;
 use std::time::Duration;
+use socket2::{Socket, Domain, Type};
 
 fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     conn.execute(
@@ -32,8 +33,15 @@ fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
 }
 
 fn handle_client(mut stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Error>> {
-    // Set a longer keepalive timeout to prevent connection drops during inactivity
-    stream.set_keepalive(Some(Duration::from_secs(300)))?; // 5 minutes
+    // Wrap the TcpStream in a Socket for advanced options
+    let socket = Socket::from(stream.try_clone()?);
+    
+    // Set keepalive option
+    socket.set_keepalive(true)?;
+    
+    // Set the keepalive time (if supported by your platform)
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    socket.set_tcp_keepalive(&socket2::TcpKeepalive::new().with_time(Duration::from_secs(300)))?;
     
     println!("Starting to collect data from client...");
     let reader = BufReader::new(&stream);
@@ -95,7 +103,7 @@ fn handle_client(mut stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn
                 dac_4,
             ],
         )?;
-        
+
         record_count += 1;
         if record_count % 100 == 0 {
             println!("Processed {} records from current connection", record_count);
