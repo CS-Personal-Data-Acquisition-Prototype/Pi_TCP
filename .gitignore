@@ -1,1 +1,36 @@
 server_config.txt
+
+# Ignore configuration files
+config.ini
+src/config.rs
+
+# Ignore database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Rust build artifacts
+/target/
+Cargo.lock
+**/*.rs.bk
+
+# Rust compiler output
+*.pdb
+*.rlib
+*.rmeta
+*.so
+*.dylib
+*.dll
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# VS code files
+.vscode/
+Pi_TCP.code-workspace/target/

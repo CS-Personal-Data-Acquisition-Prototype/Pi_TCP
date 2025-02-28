@@ -4,6 +4,9 @@ use std::io::{BufReader, BufRead, Write};
 use rusqlite::{params, Connection};
 mod config;
 use std::error::Error;
+use std::time::Duration;
+use socket2::{Socket, Domain, Type};
+use serialport::{SerialPort, SerialPortSettings};
 
 fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     conn.execute(
@@ -30,8 +33,21 @@ fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn handle_client(stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Error>> {
+fn handle_client(mut stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Error>> {
+    // Wrap the TcpStream in a Socket for advanced options
+    let socket = Socket::from(stream.try_clone()?);
+    
+    // Set keepalive option
+    socket.set_keepalive(true)?;
+    
+    // Set the keepalive time (if supported by your platform)
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    socket.set_tcp_keepalive(&socket2::TcpKeepalive::new().with_time(Duration::from_secs(300)))?;
+    
+    println!("Starting to collect data from client...");
     let reader = BufReader::new(&stream);
+    let mut record_count = 0;
+    
     // Process one CSV record per line
     for line in reader.lines() {
         let line = line?;
@@ -88,7 +104,14 @@ fn handle_client(stream: TcpStream, conn: &Connection) -> Result<(), Box<dyn Err
                 dac_4,
             ],
         )?;
+
+        record_count += 1;
+        if record_count % 100 == 0 {
+            println!("Processed {} records from current connection", record_count);
+        }
     }
+    
+    println!("Client disconnected. Processed {} total records.", record_count);
     Ok(())
 }
 
