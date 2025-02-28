@@ -6,6 +6,7 @@ mod config;
 use std::error::Error;
 use std::time::Duration;
 use socket2::{Socket, Domain, Type};
+use serialport::{SerialPort, SerialPortSettings};
 
 fn init_db(conn: &Connection) -> Result<(), Box<dyn Error>> {
     conn.execute(

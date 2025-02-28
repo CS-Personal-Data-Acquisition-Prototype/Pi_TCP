@@ -2,7 +2,7 @@ server_config.txt
 
 # Ignore configuration files
 config.ini
-config.rs
+src/config.rs
 
 # Ignore database files
 *.db
@@ -33,3 +33,4 @@ Thumbs.db
 
 # VS code files
 .vscode/
+Pi_TCP.code-workspace
